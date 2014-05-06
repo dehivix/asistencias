@@ -1,0 +1,13 @@
+*.sw*
+*.pyc
+*.pyc*
+*.sqlite
+*.save*
+docs/html/*
+*.orig
+*.orig.*
+settings/*
+*.orig
+static/
+venv
+*.*~
