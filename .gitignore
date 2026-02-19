@@ -1,13 +1,33 @@
 *.sw*
 *.pyc
 *.pyc*
+__pycache__/
 *.sqlite
 *.save*
 docs/html/*
 *.orig
 *.orig.*
-settings/*
-*.orig
-static/
-venv
 *.*~
+
+# Environment
+.env
+venv/
+.venv/
+
+# Django
+staticfiles/
+media/
+database.db
+database.db.old
+*.db-journal
+
+# Legacy QR folder (now in media/qr/)
+qr/
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.idea/
+.vscode/
+.windsurf/

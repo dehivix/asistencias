@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: asistencias_django
+    volumes:
+      - .:/app:z
+      - media_data:/app/media
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+
+volumes:
+  media_data: {}

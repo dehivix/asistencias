@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escáner de Asistencia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-start p-4">
+
+    <div class="w-full max-w-md">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Control de Asistencia</h1>
+            <p class="text-gray-500 text-sm mt-1">Escanee el código QR del profesor</p>
+        </div>
+
+        <!-- Scanner -->
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div id="reader" class="w-full"></div>
+        </div>
+
+        <!-- Result -->
+        <div id="result" class="mt-4 hidden">
+            <div id="result-card" class="rounded-2xl shadow-lg p-6 text-center transition-all">
+                <div id="result-icon" class="text-4xl mb-2"></div>
+                <div id="result-title" class="text-lg font-semibold"></div>
+                <div id="result-detail" class="text-sm mt-1 opacity-80"></div>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div id="status" class="mt-4 text-center text-sm text-gray-400">
+            Iniciando cámara...
+        </div>
+
+        <!-- Recent entries -->
+        <div id="history" class="mt-6 hidden">
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Registros recientes</h2>
+            <div id="history-list" class="space-y-2"></div>
+        </div>
+    </div>
+
+    <script>
+        const CSRF_TOKEN = "{{ csrf_token }}";
+        const API_URL = "{% url 'registrar_asistencia' %}";
+
+        let scanner = null;
+        let processing = false;
+
+        function initScanner() {
+            scanner = new Html5Qrcode("reader");
+            scanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess,
+                () => {}
+            ).then(() => {
+                document.getElementById("status").textContent = "Cámara lista. Apunte al código QR.";
+            }).catch(err => {
+                document.getElementById("status").textContent = "Error al acceder a la cámara: " + err;
+                document.getElementById("status").classList.replace("text-gray-400", "text-red-500");
+            });
+        }
+
+        async function onScanSuccess(decodedText) {
+            if (processing) return;
+            processing = true;
+
+            // Pause scanner while processing
+            try { await scanner.pause(true); } catch(e) {}
+
+            document.getElementById("status").textContent = "Procesando...";
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": CSRF_TOKEN,
+                    },
+                    body: JSON.stringify({ qr_data: decodedText }),
+                });
+                const data = await res.json();
+                showResult(data);
+            } catch (err) {
+                showResult({ ok: false, error: "Error de conexión." });
+            }
+
+            // Resume scanning after 3 seconds
+            setTimeout(() => {
+                hideResult();
+                processing = false;
+                try { scanner.resume(); } catch(e) {}
+                document.getElementById("status").textContent = "Cámara lista. Apunte al código QR.";
+            }, 3000);
+        }
+
+        function showResult(data) {
+            const result = document.getElementById("result");
+            const card = document.getElementById("result-card");
+            const icon = document.getElementById("result-icon");
+            const title = document.getElementById("result-title");
+            const detail = document.getElementById("result-detail");
+
+            result.classList.remove("hidden");
+
+            if (data.ok) {
+                card.className = "rounded-2xl shadow-lg p-6 text-center bg-green-50 border border-green-200";
+                icon.textContent = "✅";
+                title.textContent = "Bienvenido, " + data.nombre;
+                title.className = "text-lg font-semibold text-green-800";
+                detail.textContent = "Entrada registrada: " + data.entrada;
+                detail.className = "text-sm mt-1 text-green-600";
+                addToHistory(data.nombre, data.entrada);
+            } else {
+                card.className = "rounded-2xl shadow-lg p-6 text-center bg-red-50 border border-red-200";
+                icon.textContent = "❌";
+                title.textContent = "Error";
+                title.className = "text-lg font-semibold text-red-800";
+                detail.textContent = data.error || "Error desconocido";
+                detail.className = "text-sm mt-1 text-red-600";
+            }
+        }
+
+        function hideResult() {
+            document.getElementById("result").classList.add("hidden");
+        }
+
+        function addToHistory(nombre, hora) {
+            const container = document.getElementById("history");
+            const list = document.getElementById("history-list");
+            container.classList.remove("hidden");
+
+            const entry = document.createElement("div");
+            entry.className = "bg-white rounded-lg shadow-sm p-3 flex justify-between items-center text-sm";
+            entry.innerHTML = `
+                <span class="font-medium text-gray-700">${nombre}</span>
+                <span class="text-gray-400">${hora}</span>
+            `;
+            list.prepend(entry);
+
+            // Keep only last 10
+            while (list.children.length > 10) {
+                list.removeChild(list.lastChild);
+            }
+        }
+
+        // Start
+        initScanner();
+    </script>
+</body>
+</html>

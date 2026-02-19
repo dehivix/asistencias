@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint (syntax check)
+        run: |
+          python -m py_compile manage.py
+          python -m py_compile Asistencias/settings.py
+          python -m py_compile Asistencias/urls.py
+          python -m py_compile asistencia/models.py
+          python -m py_compile asistencia/admin.py
+
+      - name: Django system check
+        env:
+          DEBUG: "True"
+          SECRET_KEY: "ci-test-secret-key-not-for-production"
+          DATABASE_URL: "sqlite:///test.db"
+        run: python manage.py check
+
+      - name: Run migrations
+        env:
+          DEBUG: "True"
+          SECRET_KEY: "ci-test-secret-key-not-for-production"
+          DATABASE_URL: "sqlite:///test.db"
+        run: python manage.py migrate --noinput
+
+      - name: Run tests
+        env:
+          DEBUG: "True"
+          SECRET_KEY: "ci-test-secret-key-not-for-production"
+          DATABASE_URL: "sqlite:///test.db"
+        run: python manage.py test

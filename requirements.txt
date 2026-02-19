@@ -1,0 +1,5 @@
+Django==5.1
+django-environ==0.11.2
+Pillow==10.4.0
+qrcode[pil]==7.4.2
+gunicorn==22.0.0

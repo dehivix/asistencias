@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env
+.windsurf
+*.pyc
+__pycache__
+*.sqlite
+database.db
+venv
+.venv
+staticfiles
+media
+*.md
+*.sw*
